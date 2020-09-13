@@ -1,43 +1,137 @@
 format PE console
 
+entry start
 include 'win32a.inc'
 
-; no section defined - fasm will automatically create .flat section for both
-; code and data, and set entry point at the beginning of this section
+section '.data' data readable writable
 
-        invoke  MessageBoxA,0,_message,_caption,MB_ICONQUESTION+MB_YESNO
-        cmp     eax,IDYES
-        jne     exit
+        msg1 db "Test %d",0dh,0ah,0
 
-        invoke  mciSendString,_cmd_open,0,0,0
-        invoke  mciSendString,_cmd_eject,0,0,0
-        invoke  mciSendString,_cmd_close,0,0,0
+        entr db 'Enter %s ',0
+        _1st db 'A:',0
+        _2nd db 'B:',0
+        _3rd db 'operation:',0
+        infinity db 'infinity (well, this is a moot point...)', 0
+        res db 'result: %d',0
+        res2 db 'integer part %d',0
+        nullsimbol db  ' ',0
+        res3 db '/%d',0
+        itpt db ' %d',0
+        nthn db '%d',0
+        point db ',',0
+        A dd ?
+        B dd ?
+        C dd ?
 
-exit:
-        invoke  ExitProcess,0
+section '.text' code readable executable
 
-_message db 'Do you want to sleep?',0
-_caption db 'Desktop configuration',0
+start:
 
-_cmd_open db 'open cdaudio',0
-_cmd_eject db 'set cdaudio door open',0
-_cmd_close db 'close cdaudio',0
+cinvoke printf, entr,_1st
+cinvoke scanf, itpt, A
+cinvoke printf, entr,_2nd
+cinvoke scanf, itpt, B
+cinvoke printf, entr,_3rd
 
-; import data in the same section
 
-data import
+mov eax, '1'
 
- library kernel32,'KERNEL32.DLL',\
-         user32,'USER32.DLL',\
-         winmm,'WINMM.DLL'
+invoke getch
+cmp eax,43   ; '+' sign code
+jnz @notAdd
+        mov ecx, [A]
+        add ecx, [B]
+        cinvoke printf, res, ecx
+        jmp @finish
+@notAdd:
 
- import kernel32,\
-        ExitProcess,'ExitProcess'
+cmp eax,45   ; '-' sign code
+jnz @notSub
+        mov ecx, [A]
+        sub ecx, [B]
+        cinvoke printf, res, ecx
+        jmp @finish
 
- import user32,\
-        MessageBoxA,'MessageBoxA'
+@notSub:
 
- import winmm,\
-        mciSendString,'mciSendStringA'
+cmp eax,42   ; '*' sign code
+jnz @notMul
+        mov ecx, [A]
+        imul ecx, [B]
+        cinvoke printf, res, ecx
+        jmp @finish
+@notMul:
 
-end data
+
+cmp eax,37   ; '/' sign code
+jnz @notDiv
+; Gives the answer as an integer quotient and a remainder,
+; if remainder not equal to zero
+        mov eax, [A]
+        mov ecx, [B]
+        mov edx, 0
+
+        cmp [B], 0
+        jnz @fractionNotZero
+                cinvoke printf, infinity
+                jmp @finish
+        @fractionNotZero:
+
+        div ecx
+        mov [C], edx
+        cinvoke printf, res, eax
+        cinvoke printf, itpt, [C]
+        cinvoke printf, res3, [B]
+        jmp @finish
+@notDiv:
+
+cmp eax,47   ; '%' code sign
+jnz @notDiv2
+; Gives answer as a decmal fraction with comma as decimal separator
+; and exactly 4 digits after separtator
+        mov eax, [A]
+        mov ecx, [B]
+        mov edx, 0
+
+        cmp [B], 0
+        jnz @fractionNotZero2
+                cinvoke printf, infinity
+                jmp @finish
+        @fractionNotZero2:
+
+        div ecx
+        mov [C], edx
+        cinvoke printf, res, eax
+        cinvoke printf, point            ;prints decimal separator
+
+        mov ebx, 0
+        @loop:
+                mov eax, [C]
+                mov ecx, [B]
+                imul eax, 10
+                mov edx, 0
+                div ecx
+                mov [C], edx
+                cinvoke printf, nthn, eax
+                add ebx, 1
+        cmp ebx, 4                       ;number of digits in fractional part
+        jnz @loop
+
+        jmp @finish
+@notDiv2:
+
+@finish:
+invoke getch    ;waiting for any key pressed
+invoke ExitProcess, 0
+
+section '.idata' import data readable
+library kernel,'kernel32.dll',\
+msvcrt,'msvcrt.dll'
+
+import kernel,\
+ExitProcess,'ExitProcess'
+
+import msvcrt,\
+printf,'printf',\
+scanf,'scanf',\
+getch,'_getch'
