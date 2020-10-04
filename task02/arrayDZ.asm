@@ -4,7 +4,7 @@ entry start
 include 'win32a.inc'
 
 ;--------------------------------------------------------------------------
-;вариант 4. Массив B, где B[i] = 1, если A[i] >0, = -1, если A[i] <0, = 0,если  A[i]=0
+;variant 4.Arrayв B, where B[i] = 1, if A[i] >0,or = -1, if A[i] <0, or = 0, if A[i]=0
 section '.data' data readable writable
 
         strVecSize     db 'size of vector: ', 0
